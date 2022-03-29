@@ -1,153 +1,153 @@
-#include <iostream>
-#include "Notebook.hpp"
-//#include "sources/Direction.hpp"
-#include "Direction.hpp"
-
 #include <string>
-#include <algorithm>
+#include "Direction.hpp"
+#include <iostream>
+#include <vector>
 #include <map>
-#include <stdexcept>
-#define ROW_LENGTH 100
-#define MAX_CHAR 126
-#define MIN_CHAR 33
+#include "Notebook.hpp"
 
-using namespace ariel;
-using namespace std;
-namespace ariel{
-    std::string newLine(){
-        std::string ans = "";
-        for(int i=0;i<ROW_LENGTH;i++){
-            ans += "_";
+const int PAGE_PRINT= 99;
+const int MAX_COL= 99;
+const int maxCharValue=126;
+const int mincharValue=32;
+
+namespace ariel {
+    Notebook::Notebook(){}
+    Notebook::~Notebook(){}
+    void Notebook::erase(int page, int row, int col, ariel::Direction direction,int eraseSize) {
+        if (page < 0 || row < 0 || col < 0 || eraseSize < 0) {
+            throw std::invalid_argument("Negative page/row/col/eraseSize detected");
         }
-        return ans;
-    }
-
-//    Notebook::Notebook() {}
-
-    void Notebook::write(int page,int row,int col,Direction d,std::string text){
-        if (page<0 || row<0 || col<0){
-            throw  std::invalid_argument("Page,Row,Column MUST be an unsigned integer (above 0)");
+        if (col > MAX_COL) {
+            throw std::invalid_argument("Trying to erase in an invalid location");
         }
-        if (col >= ROW_LENGTH || ((int)text.length() + col > ROW_LENGTH && d == Direction::Horizontal )){
-            throw  std::invalid_argument("Trying to write in an invalid location");
+        if ((col + eraseSize) > MAX_COL&& direction == Direction::Horizontal) {
+            throw std::invalid_argument("Trying to erase in an invalid location");
         }
-        int stringLen = text.length();
-
-        if(d == Direction::Horizontal){
-            pair<int, int> pair = make_pair(page,row);
-            if (notebook[pair] == ""){
-                notebook[pair] = newLine();
-//                std::cout<< "Made a new line "<< page<<","<<row <<std::endl;
+        if (direction == Direction::Horizontal) {
+            if (notebook[page][row].empty()) {
+                for (int i = 0; i < MAX_COL; i++) {
+                    notebook[page][row].push_back('_');
+                }
             }
-            else{
-                for (int i = col; i < col+stringLen; ++i) {
-                    if (notebook.at(pair).at((unsigned int)i) != '_'){
-                        throw  std::invalid_argument("Trying to overwrite an existing character");
+            string eraseString;
+            for (int i = 0; i < eraseSize; ++i) {
+                eraseString.push_back('~');
+            }
+            notebook[page][row].replace((unsigned long) col, (unsigned long) eraseSize, eraseString);
+        }
+        else {
+            for (int i = 0; i < eraseSize; i++) {
+                if (notebook[page][row + i].empty()) {
+                    for (int k = 0; k < MAX_COL; k++) {
+                        notebook[page][row + i].push_back('_');
                     }
                 }
+                notebook[page][row + i].replace((unsigned long) col, 1, "~");
             }
         }
-        else{
-            for (int i = row; i < row+stringLen; ++i) {
-                pair<int, int> pair = make_pair(page,i);
-                if(notebook[pair] == ""){
-                    notebook[pair] = newLine();
-//                    std::cout<< "Made a new line "<< page<<","<<i <<std::endl;
+    }
+
+    std::string Notebook::read(int page, int row, int col, ariel::Direction direction, int readSize) {
+        if (page < 0 || row < 0 || col < 0 || readSize < 0) {
+            throw std::invalid_argument("Negative page/row/col/eraseSize detected");
+        }
+        if (col > MAX_COL) {
+            throw std::invalid_argument("Trying to read in an invalid location");
+        }
+        if ((col + readSize) > MAX_COL + 1 && direction == Direction::Horizontal) {
+            throw std::invalid_argument("Trying to read in an invalid location");
+        }
+        if (Direction::Horizontal == direction) {
+            if (!notebook[page][row].empty()) {
+                if (col == MAX_COL&& readSize== 1) {
+                    string s;
+                    s.push_back(notebook[page][row].at((unsigned long) MAX_COL- 1));
+                    return s;
                 }
-                else{
-                    if(notebook[pair][(unsigned int)col] != '_'){
-                        throw  std::invalid_argument("Trying to overwrite an existing character");
+                string str = notebook[page][row];
+                unsigned long start = (unsigned long) (col);
+                unsigned long readSizeInLong = (unsigned long) (readSize);
+                string r = str.substr(start, readSizeInLong);
+                return r;
+            }
+                string str;
+                for (int i = 0; i < readSize; ++i) {
+                    str.push_back('_');
+                }
+                return str;
+        }
+        string str;
+        for (int i = 0; i < readSize; ++i) {
+            if (notebook[page][row + i].empty()) {
+                str.push_back('_');
+            } else {
+                str.push_back(notebook[page][row + i].at((unsigned long) col));
+            }
+        }
+        return str;
+
+    }
+
+    void Notebook::show(int page) {
+        if (page < 0) {
+            throw std::invalid_argument("Negative page detected");
+        }
+        for (int i = 0; i < PAGE_PRINT; ++i) {
+            std::cout << read(page,i,0,Direction::Horizontal,MAX_COL);
+        }
+    }
+
+    void Notebook::write(int page, int row, int col, ariel::Direction direction, std::string text) {
+        string invaild = "~\n";
+        for (int i = 0; i < text.size(); ++i) {
+            if (text.at((unsigned long) i) < mincharValue || text.at((unsigned long) i) > maxCharValue) {
+                throw std::invalid_argument("Bad text input");
+            }
+            for (int j = 0; j < 2; ++j) {
+                if (text.at((unsigned long) i) == invaild.at((unsigned long) j)) {
+                    throw std::invalid_argument("Bad text input");
+                }
+            }
+        }
+        if (page < 0 || row < 0 || col < 0) {
+            throw std::invalid_argument("Negative page/row/col/eraseSize detected");
+        }
+        if (col > MAX_COL) {
+            throw std::invalid_argument("Trying to write in an invalid location");
+        }
+        if ((col + (int)text.length()) > MAX_COL&& direction == Direction::Horizontal) {
+            throw std::invalid_argument("Trying to write in an invalid location");
+        }
+        if (Direction::Horizontal == direction) {
+            if (notebook[page][row].empty()) {
+                for (int i = 0; i < MAX_COL; i++) {
+                    notebook[page][row].push_back('_');
+                }
+            }
+            for (int i = 0; i < text.length(); i++) {
+                int currPos = i + col;
+                if (notebook[page][row].at((unsigned long) currPos) != '_') {
+                    throw std::invalid_argument("Trying to over-write a written character");
+                }
+            }
+            notebook[page][row].replace((unsigned long) col, text.length(), text);
+        }
+        else {
+            for (int i = 0; i < text.length(); i++) {
+                if (notebook[page][row + i].empty()) {
+                    for (int k = 0; k < MAX_COL+ 1; k++) {
+                        notebook[page][row + i].push_back('_');
                     }
                 }
-            }
-        }
-        if(d == Direction::Horizontal){
-            pair<int, int> pair = make_pair(page,row);
-            for (int i = 0; i < stringLen; ++i) {
-                notebook[pair][(unsigned int)(col+i)] = text[(unsigned int)i];
-//                std::cout<< "Wrote "<< text[(unsigned int) i] <<" at "<< page << "," << row << "," << col+i <<std::endl;
-            }
-        }
-        else{
-            for (int i = 0; i < stringLen; ++i) {
-                pair<int, int> pair = make_pair(page,row+i);
-                notebook[pair][(unsigned int)col] = text[(unsigned int)i];
-//                std::cout<< "Wrote "<< text[(unsigned int) i] <<" at "<< page << "," << row+i << "," << col <<std::endl;
-            }
-        }
-    }
-    std::string Notebook::read(int page,int row,int col,Direction d,int readSize){
-        if (page<0 || row<0 || col<0){
-            throw  std::invalid_argument("Page,Row,Column MUST be an unsigned integer (above 0)");
-        }
-        if (col >= 100 || (readSize + col > 100 && d == Direction::Horizontal )){
-            throw  std::invalid_argument("Trying to read in an invalid location");
-        }
-        if(d == Direction::Horizontal){
-            pair<int, int> pair = make_pair(page,row);
-            if (notebook[pair] == ""){
-                notebook[pair] = newLine();
-            }
-        }
-        else{
-            for (int i = row; i < row+readSize; ++i) {
-                pair<int, int> pair = make_pair(page,i);
-                if(notebook[pair] == ""){
-                    notebook[pair] = newLine();
+                if (notebook[page][row + i].at((unsigned long) col) == '_') {
+                    string currChar;
+                    currChar.push_back(text.at((unsigned long) i));
+                    notebook[page][row + i].replace((unsigned long) col, 1, currChar);
+                }
+                else {
+                    throw std::invalid_argument("Trying to over-write a written character");
                 }
             }
         }
-        string ans = "";
-        if(d == Direction::Horizontal){
-            pair<int, int> pair = make_pair(page,row);
-            for (int i = 0; i < readSize; ++i) {
-                ans += notebook[pair][(unsigned int)(col+i)];
-            }
-        }
-        else{
-            for (int i = 0; i < readSize; ++i) {
-                pair<int, int> pair = make_pair(page,row+i);
-                ans += notebook[pair][(unsigned int)col];
-            }
-        }
-        return ans;
-    }
-    void Notebook::erase(int page,int row,int col,Direction d,int eraseSize){
-        if (page<0 || row<0 || col<0){
-            throw  std::invalid_argument("Page,Row,Column MUST be an unsigned integer (above 0)");
-        }
-        if (col >= 100 || (eraseSize + col > 100 && d == Direction::Horizontal )){
-            throw  std::invalid_argument("Trying to erase in an invalid location");
-        }
-        if(d == Direction::Horizontal){
-            pair<int, int> pair = make_pair(page,row);
-            if (notebook[pair] == ""){
-                notebook[pair] = newLine();
-            }
-        }
-        else{
-            for (int i = row; i < row+eraseSize; ++i) {
-                pair<int, int> pair = make_pair(page,i);
-                if(notebook[pair] == ""){
-                    notebook[pair] = newLine();
-                }
-            }
-        }
-        if(d == Direction::Horizontal){
-            pair<int, int> pair = make_pair(page,row);
-            for (int i = 0; i < eraseSize; ++i) {
-                notebook[pair][(unsigned int)(col+i)] = '~';
-            }
-        }
-        else{
-            for (int i = 0; i < eraseSize; ++i) {
-                pair<int, int> pair = make_pair(page,row+i);
-                notebook[pair][(unsigned int)col] = '~';
-            }
-        }
-    }
-    std::string Notebook::show(int page){
-        return "Hi";
     }
 }
-
